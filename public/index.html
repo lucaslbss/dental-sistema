@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caixa - Dental Brasilis</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; }
+        .topo { display: flex; justify-content: space-between; align-items: center; max-width: 900px; margin: 0 auto 20px auto; }
+        .btn-sair { background: #dc3545; padding: 8px 15px; color: white; text-decoration: none; border-radius: 4px; border: none; cursor: pointer;}
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); max-width: 900px; margin: 0 auto 20px auto; }
+        label { font-weight: bold; display: block; margin-top: 10px; }
+        input, select { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { margin-top: 15px; padding: 10px 15px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px;}
+        button:hover { background: #218838; }
+        .escondido { display: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        .filtros { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .filtros > div { flex: 1; min-width: 200px; }
+        .btn-pdf { background: #ffc107; color: black; font-weight: bold; }
+        .btn-pdf:hover { background: #e0a800; }
+    </style>
+    <!-- Bibliotecas para gerar PDF no navegador -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+
+<div class="topo">
+    <h2>Dental Brasilis - Controle Financeiro</h2>
+    <button class="btn-sair" onclick="sair()">Sair (Logout)</button>
+</div>
+
+<div class="container">
+    <h2>Registrar Pagamento</h2>
+    <form id="formPagamento">
+        <label>Nome do Cliente:</label>
+        <input type="text" id="cliente" required>
+        
+        <label>Valor Pago (R$):</label>
+        <input type="number" step="0.01" id="valor" required>
+        
+        <label>Forma de Pagamento:</label>
+        <select id="formaPagamento" required>
+            <option value="">Selecione...</option>
+            <option value="Dinheiro">Dinheiro</option>
+            <option value="Cartão">Cartão</option>
+            <option value="Cheque">Cheque</option>
+        </select>
+        
+        <div id="dadosCheque" class="escondido">
+            <label>Emissor do Cheque:</label>
+            <input type="text" id="emissor">
+            <label>Vencimento (Pré-datado):</label>
+            <input type="date" id="vencimento">
+        </div>
+        
+        <button type="submit">Salvar Pagamento</button>
+    </form>
+</div>
+
+<div class="container">
+    <h2>Relatórios e Pesquisas</h2>
+    
+    <div class="filtros">
+        <div>
+            <label>Filtrar por Data:</label>
+            <input type="date" id="filtroData" onchange="aplicarFiltros()">
+        </div>
+        <div>
+            <label>Filtrar por Cliente:</label>
+            <input type="text" id="filtroCliente" placeholder="Digite o nome..." onkeyup="aplicarFiltros()">
+        </div>
+    </div>
+    
+    <button class="btn-pdf" onclick="gerarPDF()">Baixar Relatório em PDF</button>
+
+    <table id="tabelaDados">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Cliente</th>
+                <th>Valor (R$)</th>
+                <th>Forma</th>
+                <th>Detalhes (Cheque)</th>
+            </tr>
+        </thead>
+        <tbody id="tabelaPagamentos"></tbody>
+    </table>
+</div>
+
+<script>
+    // 1. Verificação de Segurança
+    if (!localStorage.getItem('tokenDental')) {
+        window.location.href = '/login.html';
+    }
+
+    function sair() {
+        localStorage.removeItem('tokenDental');
+        window.location.href = '/login.html';
+    }
+
+    // 2. Lógica do Formulário
+    let todosOsPagamentos = []; 
+
+    document.getElementById('formaPagamento').addEventListener('change', (e) => {
+        document.getElementById('dadosCheque').classList.toggle('escondido', e.target.value !== 'Cheque');
+    });
+
+    document.getElementById('formPagamento').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const dados = {
+            cliente: document.getElementById('cliente').value,
+            valor: document.getElementById('valor').value,
+            formaPagamento: document.getElementById('formaPagamento').value,
+            emissor: document.getElementById('emissor').value,
+            vencimento: document.getElementById('vencimento').value
+        };
+
+        await fetch('/api/pagamentos', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(dados) 
+        });
+        
+        alert('Pagamento registrado com sucesso!');
+        document.getElementById('formPagamento').reset();
+        document.getElementById('dadosCheque').classList.add('escondido');
+        carregarPagamentos();
+    });
+
+    // 3. Tabela e Filtros
+    async function carregarPagamentos() {
+        const resposta = await fetch('/api/pagamentos');
+        todosOsPagamentos = await resposta.json();
+        aplicarFiltros();
+    }
+
+    function aplicarFiltros() {
+        const filtroDataRaw = document.getElementById('filtroData').value;
+        const filtroCliente = document.getElementById('filtroCliente').value.toLowerCase();
+
+        let dataFormatada = "";
+        if (filtroDataRaw) {
+            const partes = filtroDataRaw.split('-');
+            dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`; // YYYY-MM-DD para DD/MM/YYYY
+        }
+
+        const filtrados = todosOsPagamentos.filter(pag => {
+            const passaData = dataFormatada === "" || pag.dataRegistro === dataFormatada;
+            const passaCliente = filtroCliente === "" || pag.cliente.toLowerCase().includes(filtroCliente);
+            return passaData && passaCliente;
+        });
+
+        renderizarTabela(filtrados);
+    }
+
+    function renderizarTabela(dados) {
+        const tbody = document.getElementById('tabelaPagamentos');
+        tbody.innerHTML = '';
+        dados.forEach(pag => {
+            let detalhes = pag.formaPagamento === 'Cheque' ? `Emissor: ${pag.emissor} (Venc: ${pag.vencimento.split('-').reverse().join('/')})` : '-';
+            tbody.innerHTML += `
+                <tr>
+                    <td>${pag.dataRegistro}</td>
+                    <td>${pag.cliente}</td>
+                    <td>R$ ${parseFloat(pag.valor).toFixed(2)}</td>
+                    <td>${pag.formaPagamento}</td>
+                    <td>${detalhes}</td>
+                </tr>
+            `;
+        });
+    }
+
+    // 4. Geração de PDF (Relatório)
+    function gerarPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        const dataFiltro = document.getElementById('filtroData').value;
+        const clienteFiltro = document.getElementById('filtroCliente').value;
+        
+        let titulo = "Relatório de Caixa - Dental Brasilis";
+        if (dataFiltro) titulo += ` | Data: ${dataFiltro.split('-').reverse().join('/')}`;
+        if (clienteFiltro) titulo += ` | Cliente: ${clienteFiltro}`;
+
+        doc.setFontSize(12);
+        doc.text(titulo, 14, 15);
+        
+        doc.autoTable({ html: '#tabelaDados', startY: 25 });
+        doc.save('relatorio-financeiro.pdf');
+    }
+
+    carregarPagamentos();
+</script>
+</body>
+</html>

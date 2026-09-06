@@ -1,4 +1,4 @@
-# 🦷 Sistema de Controle Financeiro - Clínica Odontológica
+# 🦷 Sistema de Controle Financeiro - Pequena Empresa de Comércio de Produtos Odontológicos
 
 Este projeto é um sistema web minimalista desenvolvido como **Atividade Extensionista** para o curso de Bacharelado em Ciência da Computação da **Gran Faculdade**. 
 

@@ -2,6 +2,8 @@
 
 Este projeto é um sistema web minimalista desenvolvido como **Atividade Extensionista** para o curso de Bacharelado em Ciência da Computação da **Gran Faculdade**. 
 
+🚧 Status do Projeto: Esta é a primeira versão (MVP) da aplicação. O sistema encontra-se em fase inicial de validação e continuará sendo evoluído, aprimorado e submetido a novos ciclos de testes para receber futuras melhorias.
+
 O objetivo do projeto é promover a **transformação digital** de uma microempresa local (clínica odontológica), substituindo o controle financeiro feito em planilhas instáveis por um sistema local seguro, ágil e aderente aos princípios da Lei Geral de Proteção de Dados (LGPD).
 
 ## ✨ Funcionalidades
